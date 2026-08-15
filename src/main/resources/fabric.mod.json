@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "fabricsafari",
+  "version": "1.0.0",
+  "name": "Safari Fabric",
+  "description": "yk what this does",
+  "authors": [ "me maybe" ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/modid/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.safari.mod.SafariModClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.1",
+    "fabric-api": "*"
+  }
+}

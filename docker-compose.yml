@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  mod-builder:
+    build: .
+    command: tail -f /dev/null
+    volumes:
+      - .:/workspace
+      - gradle_cache:/workspace/.gradle_home
+    environment:
+      - GRADLE_OPTS=-Dorg.gradle.daemon=false
+
+volumes:
+  gradle_cache:
