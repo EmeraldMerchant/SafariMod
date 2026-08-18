@@ -2,6 +2,7 @@ package com.safari.mod.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.safari.mod.SafariModClient;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Camera;
@@ -9,19 +10,21 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.phys.Vec3;
 
-import com.safari.mod.SafariModClient;
-
+import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class ArmorStandTracerRenderer {
 
     private static boolean initialized = false;
 
-    private ArmorStandTracerRenderer() {
-    }
+    private static final Set<UUID> entitiesToDraw =
+            Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    private ArmorStandTracerRenderer() {}
 
     public static void init() {
         if (initialized) {
@@ -35,25 +38,36 @@ public final class ArmorStandTracerRenderer {
         );
     }
 
+    public static void drawLineTo(Entity entity) {
+        if (entity == null || !entity.isAlive()) {
+            return;
+        }
+
+        entitiesToDraw.add(entity.getUUID());
+    }
+
+    public static void removeLineTo(Entity entity) {
+        if (entity == null) {
+            return;
+        }
+
+        entitiesToDraw.remove(entity.getUUID());
+    }
+
+    public static void clear() {
+        entitiesToDraw.clear();
+    }
+
     private static void render(LevelRenderContext context) {
         Minecraft mc = Minecraft.getInstance();
 
         if (mc.player == null || mc.level == null) {
+            entitiesToDraw.clear();
             return;
         }
 
         Camera camera = mc.gameRenderer.getMainCamera();
-
-        /*
-         * IMPORTANT:
-         *
-         * Do NOT create a new PoseStack here.
-         *
-         * The PoseStack supplied by LevelRenderContext is already part
-         * of Minecraft's world rendering transformation.
-         */
         PoseStack poseStack = context.poseStack();
-
         MultiBufferSource.BufferSource bufferSource = context.bufferSource();
 
         VertexConsumer lines = bufferSource.getBuffer(RenderTypes.LINES);
@@ -62,16 +76,10 @@ public final class ArmorStandTracerRenderer {
             return;
         }
 
-        Vec3 cameraPos = camera.position();
-
-        /*
-         * Player position for this render frame.
-         *
-         * Using the interpolated position avoids the visible jitter that
-         * happens when mixing tick-position data with the render camera.
-         */
         float partialTick =
                 mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
+
+        Vec3 cameraPos = camera.position();
 
         double playerX = lerp(
                 partialTick,
@@ -91,101 +99,56 @@ public final class ArmorStandTracerRenderer {
                 mc.player.getZ()
         );
 
-        /*
-         * Eye height at the current player position.
-         */
         double eyeY = playerY + mc.player.getEyeHeight();
 
-        /*
-         * Camera forward direction.
-         *
-         * Unlike the old Camera.getLookVector() attempt, Minecraft's
-         * rotation values can be converted directly into a direction.
-         */
         Vec3 look = Vec3.directionFromRotation(
                 camera.xRot(),
                 camera.yRot()
         );
 
-        /*
-         * Start slightly in front of the player's eyes.
-         *
-         * 0.20 blocks is enough to make the line originate in front
-         * of the face instead of visually clipping through it.
-         */
         Vec3 startWorld = new Vec3(
                 playerX,
                 eyeY,
                 playerZ
         ).add(look.scale(0.20));
 
-        /*
-         * Convert world coordinates into camera-relative coordinates.
-         *
-         * Because the context PoseStack is already the world-render
-         * stack, these coordinates are relative to the camera.
-         */
-        float startX = (float) (startWorld.x - cameraPos.x);
-        float startY = (float) (startWorld.y - cameraPos.y);
-        float startZ = (float) (startWorld.z - cameraPos.z);
+        float startX =
+                (float) (startWorld.x - cameraPos.x);
 
-        for (Entity entity : mc.level.entitiesForRendering()) {
+        float startY =
+                (float) (startWorld.y - cameraPos.y);
 
-            if (!(entity instanceof ArmorStand armorStand)) {
+        float startZ =
+                (float) (startWorld.z - cameraPos.z);
+
+        for (UUID uuid : entitiesToDraw) {
+
+            Entity entity = mc.level.getEntity(uuid);
+
+            if (entity == null ||
+                    entity.isRemoved() ||
+                    !entity.isAlive()) {
                 continue;
             }
 
-            if (!armorStand.isAlive()) {
-                continue;
-            }
-
-            UUID uuid = armorStand.getUUID();
-
-            String name = armorStand.getCustomName() != null
-                    ? armorStand.getCustomName().getString()
-                    : "";
-
-            boolean inHideyhoSet =
-                    SafariModClient.hideyhoArmorStands.contains(uuid);
-
-            boolean isSparkling =
-                    name.contains(SafariModClient.TARGET_ARMOR_STAND_NAME);
-
-            boolean isHideyhoName =
-                    name.contains("Hideyho");
-
-            if (!inHideyhoSet && !isSparkling && !isHideyhoName) {
-                continue;
-            }
-
-            /*
-             * Interpolate the armor stand position too.
-             *
-             * This is important because the camera is rendered between
-             * ticks while entity coordinates can represent the previous
-             * tick.
-             */
             double targetX = lerp(
                     partialTick,
-                    armorStand.xo,
-                    armorStand.getX()
+                    entity.xo,
+                    entity.getX()
             );
 
             double targetY = lerp(
                     partialTick,
-                    armorStand.yo,
-                    armorStand.getY()
+                    entity.yo,
+                    entity.getY()
             );
 
             double targetZ = lerp(
                     partialTick,
-                    armorStand.zo,
-                    armorStand.getZ()
+                    entity.zo,
+                    entity.getZ()
             );
 
-            /*
-             * Lower the target by exactly 1 block.
-             */
             targetY -= 1.0;
 
             Vec3 targetWorld = new Vec3(
@@ -203,13 +166,6 @@ public final class ArmorStandTracerRenderer {
             float targetRelZ =
                     (float) (targetWorld.z - cameraPos.z);
 
-            /*
-             * Calculate a normal for the line.
-             *
-             * RenderTypes.LINES requires a normal. Using the direction
-             * of the line gives the renderer a stable value rather than
-             * constantly changing it based on the camera angle.
-             */
             Vec3 lineDirection =
                     targetWorld.subtract(startWorld);
 
@@ -221,9 +177,6 @@ public final class ArmorStandTracerRenderer {
 
             Vec3 normal = lineDirection.normalize();
 
-            /*
-             * Add the two vertices making up the line.
-             */
             lines.addVertex(
                     poseStack.last(),
                     startX,
@@ -261,6 +214,7 @@ public final class ArmorStandTracerRenderer {
             double previous,
             double current
     ) {
-        return previous + (current - previous) * partialTick;
+        return previous +
+                (current - previous) * partialTick;
     }
 }

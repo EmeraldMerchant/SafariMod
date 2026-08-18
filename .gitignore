@@ -136,3 +136,4 @@ crash-reports/
 build_mod.bat
 setup_docker.bat
 DockerFile
+github.bat
