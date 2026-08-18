@@ -40,8 +40,9 @@ public class SafariModClient implements ClientModInitializer {
     private final Queue<ArmorStand> todo2 = new ConcurrentLinkedQueue<>();
 
     private int tickCounter = 0;
-    // private static final String critter = "";
-    public static final String RANDOM_SYMBOL = "§b[§6§k0§r§b]§r";
+    private static final String critter = "";
+    private static final String Pref = "§b[§6§k0§r§b]§r §6";
+    private static final String Suff = " §b[§6§k0§r§b]§r";
     private static final int INTERVAL_TICKS = 4;
     public static volatile boolean inSafari;
     public static volatile boolean inM7;
@@ -193,11 +194,10 @@ public class SafariModClient implements ClientModInitializer {
         if (inM7 && isCP) {
             ArmorStandTracerRenderer.drawLineTo(armorStand);
         }
-
         /*
          * Things that need the flashing alert: sparkling in safari & master cp in m7
          */
-        if ((inSafari && isTarget) || (inM7 && isCP)) {
+            if ((inSafari && isTarget) || (inM7 && isCP)) {
             if (armorStandsToAlert.add(armorStand)) {
                 Minecraft minecraft = Minecraft.getInstance();
                 if (minecraft.player != null) {
@@ -244,19 +244,15 @@ public class SafariModClient implements ClientModInitializer {
         }
 
         /*
-         * if (minecraft.player != null) {
-         * minecraft.player.sendSystemMessage(Component.literal("Scoreboard Line 5: " +
-         * fullLine));
-         * }
+         * chat("Scoreboard Line 5: " + fullLine));
          */
-
         inSafari = containsSafari(fullLine);
         inM7 = containsM7(fullLine);
         hasScannedWorld = true;
     }
 
     private boolean containsSafari(String text) {
-        return ModScanner.cleanText(text).endsWith("Critter Safari");
+        return ModScanner.cleanText(text).contains("Critter Safari");
     }
 
     private boolean containsM7(String text) {
@@ -273,17 +269,24 @@ public class SafariModClient implements ClientModInitializer {
         /*
          * Remove the mob-type prefix from Critter names.
          */
-        String[] parts = name.split("\\s+");
-        if (parts.length >= 3) {
-            name = String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length));
+        if (name.contains(critter)) {
+            String[] parts = name.split("\\s+");
+            if (parts.length >= 3) {
+                name = String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length));
+            }
         }
-
-        /*
-         * Convert & formatting codes to Minecraft's § codes.
-         */
-        String displayName = RANDOM_SYMBOL + " §6" + name + " " + RANDOM_SYMBOL;
+        
+        String displayName = Pref + name + Suff;
+        minecraft.gui.setTimes(0, 2000, 0 );
         minecraft.gui.setSubtitle(Component.empty());
         minecraft.gui.setTitle(Component.literal(displayName));
+    }
+
+    private void chat(String text) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null) {
+            minecraft.player.sendSystemMessage(Component.literal(text));
+        }
     }
 
 }
