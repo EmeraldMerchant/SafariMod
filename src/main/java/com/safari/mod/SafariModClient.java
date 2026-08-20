@@ -207,9 +207,10 @@ public class SafariModClient implements ClientModInitializer {
 
         String name = customName.getString();
         boolean isSparkling = name.contains(TARGET_ARMOR_STAND_NAME);
-        boolean isHideon = name.contains("Hideon");
+        boolean isHideon = name.contains("Hideon") && name.contains(critter);
         boolean isCP = name.contains(TARGET_CP);
         boolean isHideyho = name.contains(TARGET_Hideyho);
+        boolean isDuplico = name.contains(TARGET_DUPLICO) && name.contains(critter);
 
         if (inSafari) {
             if (isSparkling) {
@@ -224,7 +225,7 @@ public class SafariModClient implements ClientModInitializer {
                 glowHideyho(armorStand);
             }
 
-            if (name.contains(TARGET_DUPLICO)) {
+            if (isDuplico) {
                 glowDuplico(armorStand);
             }
         }
