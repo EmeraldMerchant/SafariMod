@@ -15,12 +15,10 @@ public final class KickedWarn {
     }
 
     private static final int START_DELAY_TICKS = 10;
-
-    private static final Pattern PLAYERS_PATTERN =
-            Pattern.compile(
-                    "Players\\s*\\((\\d+)\\)",
-                    Pattern.CASE_INSENSITIVE
-            );
+    private static boolean announced;
+    private static final Pattern PLAYERS_PATTERN = Pattern.compile(
+            "Players\\s*\\((\\d+)\\)",
+            Pattern.CASE_INSENSITIVE);
 
     private static boolean safariInstanceStarted;
     private static boolean monitoring;
@@ -32,8 +30,7 @@ public final class KickedWarn {
     public static void init() {
 
         ClientTickEvents.END_CLIENT_TICK.register(
-                KickedWarn::tick
-        );
+                KickedWarn::tick);
     }
 
     public static void setSafari(
@@ -44,7 +41,7 @@ public final class KickedWarn {
             safariInstanceStarted = false;
             monitoring = false;
             inventoryReady = false;
-
+            announced = false;
             delayTicks = 0;
             lastAnnouncedCount = -1;
 
@@ -57,7 +54,7 @@ public final class KickedWarn {
 
             monitoring = false;
             inventoryReady = false;
-
+            announced = false;
             delayTicks = 0;
             lastAnnouncedCount = -1;
         }
@@ -79,10 +76,6 @@ public final class KickedWarn {
             setSafari(true);
         }
 
-        /*
-         * Once inventory slot 1 is no longer empty,
-         * stop checking forever for this Safari instance.
-         */
         if (!minecraft.player
                 .getInventory()
                 .getItem(0)
@@ -98,9 +91,6 @@ public final class KickedWarn {
             return;
         }
 
-        /*
-         * Wait 0.5 seconds after world load.
-         */
         if (!monitoring) {
 
             delayTicks++;
@@ -112,26 +102,17 @@ public final class KickedWarn {
             monitoring = true;
         }
 
-        int playerCount =
-                getSafariPlayerCount(minecraft);
+        int playerCount = getSafariPlayerCount(minecraft);
 
         if (playerCount < 0) {
             return;
         }
 
-        /*
-         * Don't spam the same count every tick.
-         */
         if (playerCount == lastAnnouncedCount) {
             return;
         }
-
+        announce(minecraft, playerCount);
         lastAnnouncedCount = playerCount;
-
-        announce(
-                minecraft,
-                playerCount
-        );
     }
 
     private static int getSafariPlayerCount(
@@ -141,24 +122,19 @@ public final class KickedWarn {
             return -1;
         }
 
-        for (var entry :
-                minecraft.getConnection()
-                        .getListedOnlinePlayers()) {
+        for (var entry : minecraft.getConnection()
+                .getListedOnlinePlayers()) {
 
-            Component displayName =
-                    entry.getTabListDisplayName();
+            Component displayName = entry.getTabListDisplayName();
 
             if (displayName == null) {
                 continue;
             }
 
-            String text =
-                    ModScanner.cleanText(
-                            displayName.getString()
-                    ).trim();
+            String text = ModScanner.cleanText(
+                    displayName.getString()).trim();
 
-            int count =
-                    findPlayerCount(text);
+            int count = findPlayerCount(text);
 
             if (count >= 0) {
                 return count;
@@ -175,13 +151,10 @@ public final class KickedWarn {
             return -1;
         }
 
-        text =
-                ModScanner.cleanText(
-                        text
-                ).trim();
+        text = ModScanner.cleanText(
+                text).trim();
 
-        Matcher matcher =
-                PLAYERS_PATTERN.matcher(text);
+        Matcher matcher = PLAYERS_PATTERN.matcher(text);
 
         if (!matcher.find()) {
             return -1;
@@ -189,8 +162,7 @@ public final class KickedWarn {
 
         try {
             return Integer.parseInt(
-                    matcher.group(1)
-            );
+                    matcher.group(1));
         } catch (NumberFormatException ignored) {
             return -1;
         }
@@ -200,32 +172,28 @@ public final class KickedWarn {
             Minecraft minecraft,
             int playerCount) {
 
-        String title =
-                "§c§l"
-                        + playerCount
-                        + "/4 Players";
+        String title = "§c§l"
+                + playerCount
+                + "/4 Players";
 
         minecraft.gui.setTimes(
                 0,
                 40,
-                10
-        );
+                10);
 
         minecraft.gui.setSubtitle(
-                Component.empty()
-        );
+                Component.empty());
 
         minecraft.gui.setTitle(
-                Component.literal(title)
-        );
+                Component.literal(title));
 
-        if (playerCount > 3 || lastAnnouncedCount > 0) return;
+        if (playerCount > 3 || announced)
+            return;
         if (minecraft.player != null) {
             minecraft.player.connection.sendCommand(
                     "pc [SafariUtils] "
                             + playerCount
-                            + "/4 players in run!"
-            );
+                            + "/4 players in run!");
         }
     }
 }
