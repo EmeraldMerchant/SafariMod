@@ -89,19 +89,36 @@ public class SafariModClient implements ClientModInitializer {
             floorDropLastConfirmed.clear();
         });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            tickCounter++;
-            if (tickCounter >= INTERVAL_TICKS) {
-                tickCounter = 0;
-                stepFunction();
-            }
+            try {
+                tickCounter++;
 
-            if (client.level != null && client.level.getGameTime() % 20 == 0) {
-                updateFloorDrops();
+                if (tickCounter >= INTERVAL_TICKS) {
+                    tickCounter = 0;
+                    stepFunction();
+                }
+
+                if (client.level != null &&
+                        client.level.getGameTime() % 20 == 0) {
+                    updateFloorDrops();
+                }
+
+            } catch (Throwable t) {
+                System.err.println("[SafariUtils] ERROR in client tick:");
+                t.printStackTrace();
             }
         });
     }
 
     private void onEndClientTick(Minecraft minecraft) {
+        try {
+            onEndClientTickInternal(minecraft);
+        } catch (Throwable t) {
+            System.err.println("[SafariUtils] ERROR in onEndClientTick:");
+            t.printStackTrace();
+        }
+    }
+
+    private void onEndClientTickInternal(Minecraft minecraft) {
         if (minecraft.level == null || minecraft.player == null) {
             inSafari = false;
             inM7 = false;
@@ -209,6 +226,19 @@ public class SafariModClient implements ClientModInitializer {
     }
 
     private void processArmorStand(ArmorStand armorStand) {
+        try {
+            processArmorStandInternal(armorStand);
+        } catch (Throwable t) {
+            System.err.println(
+                    "[SafariUtils] ERROR processing ArmorStand "
+                            + armorStand.getUUID()
+                            + " name="
+                            + armorStand.getCustomName());
+            t.printStackTrace();
+        }
+    }
+
+    private void processArmorStandInternal(ArmorStand armorStand) {
         Component customName = armorStand.getCustomName();
 
         if (customName == null) {
@@ -223,10 +253,6 @@ public class SafariModClient implements ClientModInitializer {
         boolean isDuplico = name.contains(TARGET_DUPLICO) && name.contains(critter);
 
         if (inSafari) {
-            if (isSparkling) {
-                glowSparkling(armorStand);
-            }
-
             if (isHideon) {
                 glowHideon(armorStand);
             }
@@ -319,12 +345,10 @@ public class SafariModClient implements ClientModInitializer {
                 .sorted(Comparator.comparingInt(PlayerScoreEntry::value).reversed())
                 .toList();
 
-        // Ensure Line 5 (index 4) exists before checking
         if (sortedScores.size() < 5) {
             return;
         }
 
-        // Fetch Line 5
         PlayerScoreEntry entry = sortedScores.get(4);
         String owner = entry.ownerName().getString();
         PlayerTeam team = scoreboard.getPlayersTeam(owner);
@@ -334,20 +358,16 @@ public class SafariModClient implements ClientModInitializer {
             fullLine = team.getPlayerPrefix().getString() + owner + team.getPlayerSuffix().getString();
         }
 
-        // Ignore placeholder lines, blank lines, or lines containing only spaces
         String cleanedLine = ModScanner.cleanText(fullLine).trim();
         if (cleanedLine.isEmpty() || cleanedLine.contains("None")) {
             return;
         }
 
-        /*
-         * chat("Scoreboard Line 5: " + fullLine));
-         */
         boolean detectedSafari = containsSafari(fullLine);
         boolean detectedM7 = containsM7(fullLine);
         if (!detectedSafari && !detectedM7)
             return;
-        inSafari = detectedSafari;
+        inSafari = true;// detectedSafari;
         inM7 = detectedM7;
         KickedWarn.setSafari(inSafari);
         hasScannedWorld = true;
@@ -368,13 +388,10 @@ public class SafariModClient implements ClientModInitializer {
             return;
         name = ModScanner.cleanText(name).trim();
 
-        /*
-         * Remove the mob-type prefix from Critter names.
-         */
         if (name.contains(critter)) {
             String[] parts = name.split("\\s+");
             if (parts.length >= 3) {
-                name = "§l§6SPARKLING§r" + String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length));
+                name = "§l§6SPARKLING§r §b" + String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length));
             }
         }
 
@@ -528,23 +545,6 @@ public class SafariModClient implements ClientModInitializer {
                     255,
                     0,
                     255);
-        }
-    }
-
-    private void glowSparkling(ArmorStand sparklingNameTag) {
-
-        Entity target = findClosestEntity(
-                sparklingNameTag,
-                Entity.class,
-                entity -> !(entity instanceof ArmorStand) &&
-                        !(entity instanceof Display));
-
-        if (target != null) {
-            ArmorStandTracerRenderer.glow(
-                    target,
-                    255,
-                    255,
-                    140);
         }
     }
 

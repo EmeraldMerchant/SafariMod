@@ -31,35 +31,28 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class FloorDropHighlighter {
 
-    private static final Set<BlockPos> blocksToHighlight = new HashSet<>();
+    private static final Set<BlockPos> blocksToHighlight = ConcurrentHashMap.newKeySet();
 
-    private static final RenderPipeline highlighter =
-            RenderPipelines.register(
-                    RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
-                            .withLocation(
-                                    Identifier.fromNamespaceAndPath(
-                                            "safari-mod",
-                                            "pipeline/floor_drop_highlight"
-                                    )
-                            )
-                            .withDepthStencilState(Optional.empty())
-                            .build()
-            );
+    private static final RenderPipeline highlighter = RenderPipelines.register(
+            RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
+                    .withLocation(
+                            Identifier.fromNamespaceAndPath(
+                                    "safari-mod",
+                                    "pipeline/floor_drop_highlight"))
+                    .withDepthStencilState(Optional.empty())
+                    .build());
 
-    private static final ByteBufferBuilder ALLOCATOR =
-            new ByteBufferBuilder(RenderType.SMALL_BUFFER_SIZE);
+    private static final ByteBufferBuilder ALLOCATOR = new ByteBufferBuilder(RenderType.SMALL_BUFFER_SIZE);
 
-    private static final Vector4f COLOR_MODULATOR =
-            new Vector4f(1f, 1f, 1f, 1f);
+    private static final Vector4f COLOR_MODULATOR = new Vector4f(1f, 1f, 1f, 1f);
 
-    private static final Vector3f MODEL_OFFSET =
-            new Vector3f();
+    private static final Vector3f MODEL_OFFSET = new Vector3f();
 
-    private static final Matrix4f TEXTURE_MATRIX =
-            new Matrix4f();
+    private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
 
     private static BufferBuilder buffer;
     private static MappableRingBuffer vertexBuffer;
@@ -69,8 +62,7 @@ public final class FloorDropHighlighter {
 
     public static void init() {
         LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(
-                FloorDropHighlighter::render
-        );
+                FloorDropHighlighter::render);
     }
 
     public static void highlight(BlockPos pos) {
@@ -110,8 +102,7 @@ public final class FloorDropHighlighter {
         buffer = new BufferBuilder(
                 ALLOCATOR,
                 highlighter.getVertexFormatMode(),
-                highlighter.getVertexFormat()
-        );
+                highlighter.getVertexFormat());
 
         for (BlockPos pos : blocksToHighlight) {
             renderFilledBox(
@@ -122,8 +113,7 @@ public final class FloorDropHighlighter {
                     pos.getZ(),
                     pos.getX() + 1,
                     pos.getY() + 1,
-                    pos.getZ() + 1
-            );
+                    pos.getZ() + 1);
         }
 
         poseStack.popPose();
@@ -139,8 +129,7 @@ public final class FloorDropHighlighter {
             float minZ,
             float maxX,
             float maxY,
-            float maxZ
-    ) {
+            float maxZ) {
         float red = 0.0f;
         float green = 1.0f;
         float blue = 0.0f;
@@ -207,8 +196,7 @@ public final class FloorDropHighlighter {
         MeshData.DrawState drawParameters = mesh.drawState();
         VertexFormat format = drawParameters.format();
 
-        int vertexBufferSize =
-                drawParameters.vertexCount() * format.getVertexSize();
+        int vertexBufferSize = drawParameters.vertexCount() * format.getVertexSize();
 
         if (vertexBuffer == null ||
                 vertexBuffer.size() < vertexBufferSize) {
@@ -220,26 +208,20 @@ public final class FloorDropHighlighter {
             vertexBuffer = new MappableRingBuffer(
                     () -> "safari-mod floor drop highlight",
                     GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_MAP_WRITE,
-                    vertexBufferSize
-            );
+                    vertexBufferSize);
         }
 
-        CommandEncoder commandEncoder =
-                RenderSystem.getDevice().createCommandEncoder();
+        CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
         try (
-                GpuBuffer.MappedView mappedView =
-                        commandEncoder.mapBuffer(
-                                vertexBuffer.currentBuffer()
-                                        .slice(0, mesh.vertexBuffer().remaining()),
-                                false,
-                                true
-                        )
-        ) {
+                GpuBuffer.MappedView mappedView = commandEncoder.mapBuffer(
+                        vertexBuffer.currentBuffer()
+                                .slice(0, mesh.vertexBuffer().remaining()),
+                        false,
+                        true)) {
             MemoryUtil.memCopy(
                     mesh.vertexBuffer(),
-                    mappedView.data()
-            );
+                    mappedView.data());
         }
 
         GpuBuffer vertices = vertexBuffer.currentBuffer();
@@ -247,59 +229,46 @@ public final class FloorDropHighlighter {
         GpuBuffer indices;
         VertexFormat.IndexType indexType;
 
-        if (highlighter.getVertexFormatMode()
-                == VertexFormat.Mode.QUADS) {
+        if (highlighter.getVertexFormatMode() == VertexFormat.Mode.QUADS) {
 
             mesh.sortQuads(
                     ALLOCATOR,
-                    RenderSystem.getProjectionType().vertexSorting()
-            );
+                    RenderSystem.getProjectionType().vertexSorting());
 
-            indices =
-                    highlighter.getVertexFormat()
-                            .uploadImmediateIndexBuffer(
-                                    mesh.indexBuffer()
-                            );
+            indices = highlighter.getVertexFormat()
+                    .uploadImmediateIndexBuffer(
+                            mesh.indexBuffer());
 
             indexType = mesh.drawState().indexType();
 
         } else {
 
-            RenderSystem.AutoStorageIndexBuffer shapeIndexBuffer =
-                    RenderSystem.getSequentialBuffer(
-                            highlighter.getVertexFormatMode()
-                    );
+            RenderSystem.AutoStorageIndexBuffer shapeIndexBuffer = RenderSystem.getSequentialBuffer(
+                    highlighter.getVertexFormatMode());
 
-            indices =
-                    shapeIndexBuffer.getBuffer(
-                            drawParameters.indexCount()
-                    );
+            indices = shapeIndexBuffer.getBuffer(
+                    drawParameters.indexCount());
 
             indexType = shapeIndexBuffer.type();
         }
 
-        GpuBufferSlice dynamicTransforms =
-                RenderSystem.getDynamicUniforms().writeTransform(
-                        RenderSystem.getModelViewMatrix(),
-                        COLOR_MODULATOR,
-                        MODEL_OFFSET,
-                        TEXTURE_MATRIX
-                );
+        GpuBufferSlice dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
+                RenderSystem.getModelViewMatrix(),
+                COLOR_MODULATOR,
+                MODEL_OFFSET,
+                TEXTURE_MATRIX);
 
         try (
-                RenderPass renderPass =
-                        RenderSystem.getDevice()
-                                .createCommandEncoder()
-                                .createRenderPass(
-                                        () -> "safariUtils floor drop highlight",
-                                        minecraft.getMainRenderTarget()
-                                                .getColorTextureView(),
-                                        OptionalInt.empty(),
-                                        minecraft.getMainRenderTarget()
-                                                .getDepthTextureView(),
-                                        OptionalDouble.empty()
-                                )
-        ) {
+                RenderPass renderPass = RenderSystem.getDevice()
+                        .createCommandEncoder()
+                        .createRenderPass(
+                                () -> "safariUtils floor drop highlight",
+                                minecraft.getMainRenderTarget()
+                                        .getColorTextureView(),
+                                OptionalInt.empty(),
+                                minecraft.getMainRenderTarget()
+                                        .getDepthTextureView(),
+                                OptionalDouble.empty())) {
 
             renderPass.setPipeline(highlighter);
 
@@ -307,8 +276,7 @@ public final class FloorDropHighlighter {
 
             renderPass.setUniform(
                     "DynamicTransforms",
-                    dynamicTransforms
-            );
+                    dynamicTransforms);
 
             renderPass.setVertexBuffer(0, vertices);
             renderPass.setIndexBuffer(indices, indexType);
@@ -317,8 +285,7 @@ public final class FloorDropHighlighter {
                     0,
                     0,
                     drawParameters.indexCount(),
-                    1
-            );
+                    1);
         }
 
         mesh.close();

@@ -53,7 +53,16 @@ public final class CaptureDetector {
     private static String extractCaptureMob(
             String text) {
 
-        String marker = "You caught a ";
+        String marker;
+        if (text.contains("You caught a ")) {
+            marker = "You caught a ";
+        } else if (text.contains("You caught an ")) {
+            marker = "You caught an ";
+        } else if (text.contains("You found the ")) {
+            marker = "You found the ";
+        } else {
+            return null;
+        }
 
         int start = text.indexOf(marker);
 
@@ -87,7 +96,16 @@ public final class CaptureDetector {
     private static String extractLootShareMob(
             String text) {
 
-        String marker = "catching a ";
+        String marker;
+        if (text.contains("catching a ")) {
+            marker = "catching a ";
+        } else if (text.contains("catching an ")) {
+            marker = "catching an ";
+        } else if (text.contains("finding the ")) {
+            marker = "finding the ";
+        } else {
+            return null;
+        }
 
         int start = text.indexOf(marker);
 
@@ -119,11 +137,6 @@ public final class CaptureDetector {
         mob = ModScanner.cleanText(
                 mob).trim();
 
-        boolean removed = TextDisplayManager.removeMob(mob);
-
-        if (removed) {
-            System.out.println(
-                    "[Safari] Removed mob: " + mob);
-        }
+        TextDisplayManager.removeMob(mob);
     }
 }
