@@ -39,8 +39,7 @@ public final class CaptureDetector {
             return;
         }
 
-        if (text.startsWith("LOOT SHARE!") &&
-                text.contains("catching a")) {
+        if (text.startsWith("LOOT SHARE!")) {
 
             String mob = extractLootShareMob(text);
 
