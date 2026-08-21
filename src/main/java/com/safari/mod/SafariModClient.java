@@ -1,9 +1,11 @@
 package com.safari.mod;
 
+import com.safari.mod.config.ConfigManager;
 import com.safari.mod.render.ArmorStandTracerRenderer;
 import com.safari.mod.render.FloorDropHighlighter;
-
+import com.safari.mod.render.TextDisplayManager;
 import com.safari.mod.util.ModScanner;
+
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -67,8 +69,12 @@ public class SafariModClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        ConfigManager.load();
         ArmorStandTracerRenderer.init();
         FloorDropHighlighter.init();
+        KickedWarn.init();
+        TextDisplayManager.init();
+        CaptureDetector.init();
         ClientTickEvents.END_CLIENT_TICK.register(this::onEndClientTick);
         ClientEntityEvents.ENTITY_LOAD.register(this::onEntityLoad);
         ClientEntityEvents.ENTITY_UNLOAD.register(this::onEntityUnload);
@@ -98,6 +104,7 @@ public class SafariModClient implements ClientModInitializer {
         if (minecraft.level == null || minecraft.player == null) {
             inSafari = false;
             inM7 = false;
+            KickedWarn.setSafari(false);
             hasScannedWorld = false;
             trackedLevel = null;
             ArmorStandTracerRenderer.clear();
@@ -108,10 +115,10 @@ public class SafariModClient implements ClientModInitializer {
             return;
         }
         ArmorStandTracerRenderer.cleanup();
-        // Reset if dimension/level changes
         if (trackedLevel != minecraft.level) {
             trackedLevel = minecraft.level;
             hasScannedWorld = false;
+            KickedWarn.setSafari(false);
             inSafari = false;
             inM7 = false;
             ArmorStandTracerRenderer.clear();
@@ -333,8 +340,12 @@ public class SafariModClient implements ClientModInitializer {
         /*
          * chat("Scoreboard Line 5: " + fullLine));
          */
-        inSafari = containsSafari(fullLine);
-        inM7 = containsM7(fullLine);
+        boolean detectedSafari = containsSafari(fullLine);
+        boolean detectedM7 = containsM7(fullLine);
+        if (!detectedSafari && !detectedM7) return;
+        inSafari = detectedSafari;
+        inM7 = detectedM7;
+        KickedWarn.setSafari(inSafari);
         hasScannedWorld = true;
     }
 

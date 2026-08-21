@@ -1,12 +1,13 @@
 {
-  "required": true,
-  "package": "com.safari.mod.mixin",
-  "compatibilityLevel": "JAVA_25",
-  "client": [
-    "ClientGamePacketListenerMixin",
-    "EntityRendererMixin"
-  ],
-  "injectors": {
-    "defaultRequire": 1
-  }
+    "required": true,
+    "package": "com.safari.mod.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "client": [
+        "ClientGamePacketListenerMixin",
+        "EntityRendererMixin",
+        "GuiMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
 }
