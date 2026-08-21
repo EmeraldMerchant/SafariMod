@@ -84,6 +84,7 @@ public class SafariModClient implements ClientModInitializer {
             hasScannedWorld = false;
             inSafari = false;
             inM7 = false;
+            TextDisplayManager.reset();
             FloorDropHighlighter.clear();
             floorDropLastConfirmed.clear();
         });
@@ -111,6 +112,7 @@ public class SafariModClient implements ClientModInitializer {
             FloorDropHighlighter.clear();
             floorDropLastConfirmed.clear();
             armorStandsToAlert.clear();
+            TextDisplayManager.reset();
             minecraft.gui.clearTitles();
             return;
         }
@@ -125,6 +127,7 @@ public class SafariModClient implements ClientModInitializer {
             FloorDropHighlighter.clear();
             floorDropLastConfirmed.clear();
             armorStandsToAlert.clear();
+            TextDisplayManager.reset();
             minecraft.gui.clearTitles();
         }
 
@@ -342,7 +345,8 @@ public class SafariModClient implements ClientModInitializer {
          */
         boolean detectedSafari = containsSafari(fullLine);
         boolean detectedM7 = containsM7(fullLine);
-        if (!detectedSafari && !detectedM7) return;
+        if (!detectedSafari && !detectedM7)
+            return;
         inSafari = detectedSafari;
         inM7 = detectedM7;
         KickedWarn.setSafari(inSafari);

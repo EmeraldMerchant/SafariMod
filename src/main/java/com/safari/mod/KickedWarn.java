@@ -219,8 +219,8 @@ public final class KickedWarn {
                 Component.literal(title)
         );
 
+        if (playerCount > 3 || lastAnnouncedCount > 0) return;
         if (minecraft.player != null) {
-
             minecraft.player.connection.sendCommand(
                     "pc [SafariUtils] "
                             + playerCount
