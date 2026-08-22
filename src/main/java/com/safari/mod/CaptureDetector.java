@@ -27,7 +27,7 @@ public final class CaptureDetector {
 
         String text = ModScanner.cleanText(
                 message.getString()).trim();
-
+        //CAPTURE! You found the Hideyho, and as a reward it gave you 6x Hideyho Shard!
         if (text.startsWith("CAPTURE!")) {
 
             String mob = extractCaptureMob(text);
@@ -51,7 +51,7 @@ public final class CaptureDetector {
 
     private static String extractCaptureMob(
             String text) {
-
+        //CAPTURE! You found the Hideyho, and as a reward it gave you 6x Hideyho Shard!
         String marker;
         if (text.contains("You caught a ")) {
             marker = "You caught a ";
@@ -59,6 +59,7 @@ public final class CaptureDetector {
             marker = "You caught an ";
         } else if (text.contains("You found the ")) {
             marker = "You found the ";
+            text.replace(", and ", " and gained ");
         } else {
             return null;
         }
